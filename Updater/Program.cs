@@ -4,7 +4,11 @@
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 Console.WriteLine("Update Starting Soon...");
-if(Update())Environment.Exit(0);
+if (Update())
+{
+    Process.Start(AppSet("ExeName"));
+    Environment.Exit(0);
+}
 
 bool Update()
 {
