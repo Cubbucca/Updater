@@ -71,7 +71,7 @@ void CopyFolderContents(string sourceFolder, string destinationFolder, string ma
         {
             FileInfo srcFile = new FileInfo(sourceFile);
             string srcFileName = srcFile.Name;
-            if (srcFileName == "appsettings.json") continue;
+            //if (srcFileName == "appsettings.json") continue;
             Console.WriteLine($"Checking - {srcFileName}");
             // Create a destination that matches the source structure
             FileInfo destFile = new FileInfo(destinationFolder + srcFile.FullName.Replace(sourceFolder, ""));
@@ -82,7 +82,7 @@ void CopyFolderContents(string sourceFolder, string destinationFolder, string ma
                 Directory.CreateDirectory(destFile.DirectoryName);
             }
 
-            if (srcFile.LastWriteTime > destFile.LastWriteTime || !destFile.Exists)
+            if (!destFile.Exists || srcFile.LastWriteTime > destFile.LastWriteTime)
             {
                 Console.WriteLine($"Copying File - {destFile.FullName}");
                 File.Copy(srcFile.FullName, destFile.FullName, true);
