@@ -75,8 +75,7 @@ void CopyFolderContents(string sourceFolder, string destinationFolder, string ma
             
             FileInfo srcFile = new FileInfo(sourceFile);
             string srcFileName = srcFile.Name;
-            Console.WriteLine($"CopyFolder srcFileName...");
-            if (srcFileName == "appsettings.json" || srcFileName == "Microsoft.Extensions.Configuration.dll") continue;
+            //if (srcFileName == "appsettings.json") continue;
             Console.WriteLine($"Checking - {srcFileName}");
             // Create a destination that matches the source structure
             FileInfo destFile = new FileInfo(destinationFolder + srcFile.FullName.Replace(sourceFolder, ""));
