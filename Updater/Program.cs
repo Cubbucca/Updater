@@ -6,6 +6,8 @@ using System.Diagnostics;
 Console.WriteLine("Update Starting Soon...");
 if (Update())
 {
+    Console.WriteLine("Enter to Continue:");
+    Console.ReadKey();
     Process.Start(AppSet("ExeName"));
     Environment.Exit(0);
 }
@@ -60,18 +62,21 @@ void CopyFolderContents(string sourceFolder, string destinationFolder, string ma
 {
     try
     {
+        Console.WriteLine($"CopyFolder Started...");
         if (!sourceFolder.EndsWith(@"\")) { sourceFolder += @"\"; }
         if (!destinationFolder.EndsWith(@"\")) { destinationFolder += @"\"; }
 
         var exDir = sourceFolder;
         var dir = new DirectoryInfo(exDir);
         SearchOption so = (recurseFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
-
+        Console.WriteLine($"CopyFolder Loop...");
         foreach (string sourceFile in Directory.GetFiles(dir.ToString(), mask, so))
         {
+            
             FileInfo srcFile = new FileInfo(sourceFile);
             string srcFileName = srcFile.Name;
-            if (srcFileName == "appsettings.json") continue;
+            Console.WriteLine($"CopyFolder srcFileName...");
+            if (srcFileName == "appsettings.json" || srcFileName == "Microsoft.Extensions.Configuration.dll") continue;
             Console.WriteLine($"Checking - {srcFileName}");
             // Create a destination that matches the source structure
             FileInfo destFile = new FileInfo(destinationFolder + srcFile.FullName.Replace(sourceFolder, ""));
@@ -79,10 +84,10 @@ void CopyFolderContents(string sourceFolder, string destinationFolder, string ma
             if (!Directory.Exists(destFile.DirectoryName) && createFolders)
             {
                 Console.WriteLine($"Creating Dir - {destFile.DirectoryName}");
-                Directory.CreateDirectory(destFile.DirectoryName);
+                Directory.CreateDirectory(destFile.DirectoryName!);
             }
 
-            if (srcFile.LastWriteTime > destFile.LastWriteTime || !destFile.Exists)
+            if (!destFile.Exists || srcFile.LastWriteTime > destFile.LastWriteTime)
             {
                 Console.WriteLine($"Copying File - {destFile.FullName}");
                 File.Copy(srcFile.FullName, destFile.FullName, true);
@@ -91,6 +96,7 @@ void CopyFolderContents(string sourceFolder, string destinationFolder, string ma
     }
     catch (Exception ex)
     {
+        Console.WriteLine(ex.Message);
         System.Diagnostics.Debug.WriteLine(ex.Message + Environment.NewLine + Environment.NewLine + ex.StackTrace);
     }
 }
