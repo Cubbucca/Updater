@@ -6,7 +6,7 @@ using System.Diagnostics;
 Console.WriteLine("Update Starting Soon...");
 try
 {
-    if (Update())
+    if (await Update())
     {
         Console.WriteLine("App will start in 3 Seconds...");
         await Task.Delay(3000);
@@ -20,12 +20,13 @@ catch (Exception ex)
 }
 finally
 {
-    Console.WriteLine("Exiting in 10 Seconds...");
-    await Task.Delay(10000);
+    Console.WriteLine("Press Any Key To Exit");
+    Console.ReadKey();
+    Environment.Exit(0);
 }
 
 
-bool Update()
+async Task<bool> Update()
 {
     var currentDir = Environment.CurrentDirectory;
     if (!File.Exists("appsettings.json")) throw new Exception("appsettings not found");
@@ -36,7 +37,7 @@ bool Update()
     Console.WriteLine(source);
     Console.WriteLine("Checking File Versions ...");
     if (VersionMatch($"{source}{target}", target)) return true;
-    CopyFolderContents(source, currentDir, "*.*", true, true);
+    await CopyFolderContents(source, currentDir, "*.*", true, true);
     return true;
 }
 
@@ -68,14 +69,14 @@ static string AppSet(string key)
     IConfiguration configuration = new ConfigurationBuilder()
                     .AddJsonFile("appsettings.json")
                     .Build();
-    return configuration[key];
+    return configuration[key] ?? throw new Exception($"appsetting key: {key} not found");
 }
 
-void CopyFolderContents(string sourceFolder, string destinationFolder, string mask, Boolean createFolders, Boolean recurseFolders)
+async Task CopyFolderContents(string sourceFolder, string destinationFolder, string mask, Boolean createFolders, Boolean recurseFolders)
 {
     Console.WriteLine($"CopyFolder Started...");
-    if (!sourceFolder.EndsWith(@"\")) { sourceFolder += @"\"; }
-    if (!destinationFolder.EndsWith(@"\")) { destinationFolder += @"\"; }
+    if (!sourceFolder.EndsWith('\\')) { sourceFolder += '\\'; }
+    if (!destinationFolder.EndsWith('\\')) { destinationFolder += '\\'; }
 
     var exDir = sourceFolder;
     var dir = new DirectoryInfo(exDir);
@@ -84,23 +85,40 @@ void CopyFolderContents(string sourceFolder, string destinationFolder, string ma
     foreach (string sourceFile in Directory.GetFiles(dir.ToString(), mask, so))
     {
 
-        FileInfo srcFile = new FileInfo(sourceFile);
+        FileInfo srcFile = new(sourceFile);
         string srcFileName = srcFile.Name;
         //if (srcFileName == "appsettings.json") continue;
         Console.WriteLine($"Checking - {srcFileName}");
         // Create a destination that matches the source structure
-        FileInfo destFile = new FileInfo(destinationFolder + srcFile.FullName.Replace(sourceFolder, ""));
+        FileInfo destFile = new(destinationFolder + srcFile.FullName.Replace(sourceFolder, ""));
 
         if (!Directory.Exists(destFile.DirectoryName) && createFolders)
         {
             Console.WriteLine($"Creating Dir - {destFile.DirectoryName}");
             Directory.CreateDirectory(destFile.DirectoryName!);
         }
-
-        if (!destFile.Exists || srcFile.LastWriteTime > destFile.LastWriteTime)
+        var destfileexists = destFile.Exists;
+        if (!destfileexists || srcFile.LastWriteTime > destFile.LastWriteTime)
         {
+            if (destfileexists)
+            {
+                FileAttributes attrs = File.GetAttributes(destFile.FullName);
+                if ((attrs & FileAttributes.ReadOnly) == FileAttributes.ReadOnly)
+                {
+                    Console.WriteLine($"Readonly File Detected - {destFile.FullName}");
+                    File.SetAttributes(destFile.FullName, attrs & ~FileAttributes.ReadOnly);
+                }
+            }
             Console.WriteLine($"Copying File - {destFile.FullName}");
-            File.Copy(srcFile.FullName, destFile.FullName, true);
+            try
+            {
+                File.Copy(srcFile.FullName, destFile.FullName, true);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Console.WriteLine($"Access Denied Copying - {destFile.FullName}");
+                await Task.Delay(2000);
+            }
         }
     }
 }
