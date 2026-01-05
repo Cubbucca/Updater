@@ -4,13 +4,26 @@
 using Microsoft.Extensions.Configuration;
 using System.Diagnostics;
 Console.WriteLine("Update Starting Soon...");
-if (Update())
+try
 {
-    Console.WriteLine("Enter to Continue:");
-    Console.ReadKey();
-    Process.Start(AppSet("ExeName"));
-    Environment.Exit(0);
+    if (Update())
+    {
+        Console.WriteLine("App will start in 3 Seconds...");
+        await Task.Delay(3000);
+        Process.Start(AppSet("ExeName"));
+        Environment.Exit(0);
+    }
 }
+catch (Exception ex)
+{
+    Console.WriteLine($"Update Failed: {ex.Message}");
+}
+finally
+{
+    Console.WriteLine("Exiting in 10 Seconds...");
+    await Task.Delay(10000);
+}
+
 
 bool Update()
 {
@@ -23,7 +36,7 @@ bool Update()
     Console.WriteLine(source);
     Console.WriteLine("Checking File Versions ...");
     if (VersionMatch($"{source}{target}", target)) return true;
-    CopyFolderContents(source, currentDir,"*.*", true, true);
+    CopyFolderContents(source, currentDir, "*.*", true, true);
     return true;
 }
 
@@ -60,42 +73,34 @@ static string AppSet(string key)
 
 void CopyFolderContents(string sourceFolder, string destinationFolder, string mask, Boolean createFolders, Boolean recurseFolders)
 {
-    try
-    {
-        Console.WriteLine($"CopyFolder Started...");
-        if (!sourceFolder.EndsWith(@"\")) { sourceFolder += @"\"; }
-        if (!destinationFolder.EndsWith(@"\")) { destinationFolder += @"\"; }
+    Console.WriteLine($"CopyFolder Started...");
+    if (!sourceFolder.EndsWith(@"\")) { sourceFolder += @"\"; }
+    if (!destinationFolder.EndsWith(@"\")) { destinationFolder += @"\"; }
 
-        var exDir = sourceFolder;
-        var dir = new DirectoryInfo(exDir);
-        SearchOption so = (recurseFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
-        Console.WriteLine($"CopyFolder Loop...");
-        foreach (string sourceFile in Directory.GetFiles(dir.ToString(), mask, so))
+    var exDir = sourceFolder;
+    var dir = new DirectoryInfo(exDir);
+    SearchOption so = (recurseFolders ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly);
+    Console.WriteLine($"CopyFolder Loop...");
+    foreach (string sourceFile in Directory.GetFiles(dir.ToString(), mask, so))
+    {
+
+        FileInfo srcFile = new FileInfo(sourceFile);
+        string srcFileName = srcFile.Name;
+        //if (srcFileName == "appsettings.json") continue;
+        Console.WriteLine($"Checking - {srcFileName}");
+        // Create a destination that matches the source structure
+        FileInfo destFile = new FileInfo(destinationFolder + srcFile.FullName.Replace(sourceFolder, ""));
+
+        if (!Directory.Exists(destFile.DirectoryName) && createFolders)
         {
-            
-            FileInfo srcFile = new FileInfo(sourceFile);
-            string srcFileName = srcFile.Name;
-            //if (srcFileName == "appsettings.json") continue;
-            Console.WriteLine($"Checking - {srcFileName}");
-            // Create a destination that matches the source structure
-            FileInfo destFile = new FileInfo(destinationFolder + srcFile.FullName.Replace(sourceFolder, ""));
-
-            if (!Directory.Exists(destFile.DirectoryName) && createFolders)
-            {
-                Console.WriteLine($"Creating Dir - {destFile.DirectoryName}");
-                Directory.CreateDirectory(destFile.DirectoryName!);
-            }
-
-            if (!destFile.Exists || srcFile.LastWriteTime > destFile.LastWriteTime)
-            {
-                Console.WriteLine($"Copying File - {destFile.FullName}");
-                File.Copy(srcFile.FullName, destFile.FullName, true);
-            }
+            Console.WriteLine($"Creating Dir - {destFile.DirectoryName}");
+            Directory.CreateDirectory(destFile.DirectoryName!);
         }
-    }
-    catch (Exception ex)
-    {
-        Console.WriteLine(ex.Message);
-        System.Diagnostics.Debug.WriteLine(ex.Message + Environment.NewLine + Environment.NewLine + ex.StackTrace);
+
+        if (!destFile.Exists || srcFile.LastWriteTime > destFile.LastWriteTime)
+        {
+            Console.WriteLine($"Copying File - {destFile.FullName}");
+            File.Copy(srcFile.FullName, destFile.FullName, true);
+        }
     }
 }
